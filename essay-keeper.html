@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Essay Writer</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Custom CSS -->
+  <style>
+    #essay-area {
+      height: 300px;
+      overflow-y: auto;
+    }
+
+    .essay-title {
+      cursor: pointer;
+      color: #007bff;
+    }
+
+    .essay-title:hover {
+      text-decoration: underline;
+    }
+
+    .modal-content {
+      padding: 20px;
+      text-align: justify;
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <h1 class="mb-4">Essay Writer</h1>
+    <div class="form-group">
+      <label for="essay-title">Essay Title:</label>
+      <input type="text" id="essay-title" class="form-control" placeholder="Enter title">
+    </div>
+    <div class="form-group">
+      <label for="essay-area">Write your essay:</label>
+      <textarea id="essay-area" class="form-control" rows="10"></textarea>
+    </div>
+    <div class="form-group">
+      <button id="start-timer" class="btn btn-primary">Start Timer</button>
+      <button id="stop-timer" class="btn btn-danger" disabled>Stop Timer</button>
+      <button id="reset-timer" class="btn btn-secondary">Reset Timer</button>
+      <button id="reset-text" class="btn btn-warning">Reset Text</button>
+      <span id="word-count">Word Count: 0</span>
+      <button id="save-essay" class="btn btn-success ml-2">Save Essay</button>
+    </div>
+    <div id="timer" class="mt-3"></div>
+    <div id="saved-essays" class="mt-3">
+      <h3>Saved Essays:</h3>
+      <ul id="essays-list" class="list-group"></ul>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS and jQuery (optional) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- Custom JavaScript -->
+  <script>
+    let timerInterval;
+    let wordCount = 0;
+
+    function startTimer() {
+      let seconds = 0;
+      timerInterval = setInterval(() => {
+        seconds++;
+        document.getElementById("timer").innerHTML = `Time Elapsed: ${seconds} seconds`;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      document.getElementById("timer").innerHTML = "Timer Stopped";
+    }
+
+    function updateWordCount() {
+      let essay = document.getElementById("essay-area").value;
+      let words = essay.trim().split(/\s+/);
+      wordCount = words.length;
+      document.getElementById("word-count").innerHTML = `Word Count: ${wordCount}`;
+    }
+
+    document.getElementById("start-timer").addEventListener("click", () => {
+      startTimer();
+      document.getElementById("start-timer").disabled = true;
+      document.getElementById("stop-timer").disabled = false;
+      document.getElementById("reset-timer").disabled = false;
+    });
+
+    document.getElementById("stop-timer").addEventListener("click", () => {
+      stopTimer();
+      document.getElementById("start-timer").disabled = false;
+      document.getElementById("stop-timer").disabled = true;
+    });
+
+    document.getElementById("reset-timer").addEventListener("click", () => {
+      resetTimer();
+      document.getElementById("start-timer").disabled = false;
+      document.getElementById("stop-timer").disabled = true;
+      document.getElementById("reset-timer").disabled = true;
+    });
+
+    document.getElementById("essay-area").addEventListener("input", () => {
+      updateWordCount();
+    });
+
+    document.getElementById("reset-text").addEventListener("click", () => {
+      document.getElementById("essay-area").value = "";
+      updateWordCount();
+    });
+
+    document.getElementById("save-essay").addEventListener("click", () => {
+      let title = document.getElementById("essay-title").value;
+      let essay = document.getElementById("essay-area").value;
+      let timeElapsed = document.getElementById("timer").innerHTML;
+      let wordCount = document.getElementById("word-count").innerHTML;
+      saveEssay(title, essay, timeElapsed, wordCount);
+    });
+
+    function saveEssay(title, essay, timeElapsed, wordCount) {
+      let savedEssays = JSON.parse(localStorage.getItem("savedEssays")) || [];
+      savedEssays.push({ title, essay, timeElapsed, wordCount });
+      localStorage.setItem("savedEssays", JSON.stringify(savedEssays));
+      displaySavedEssays();
+    }
+
+    function displaySavedEssays() {
+      let savedEssays = JSON.parse(localStorage.getItem("savedEssays")) || [];
+      let essaysList = document.getElementById("essays-list");
+      essaysList.innerHTML = "";
+      savedEssays.forEach((essay, index) => {
+        let listItem = document.createElement("li");
+        listItem.className = "list-group-item";
+        listItem.innerHTML = `<span class="essay-title" data-toggle="modal" data-target="#essayModal" data-index="${index}">${essay.title}</span> <button class="btn btn-sm btn-danger delete-essay" data-index="${index}">Delete</button>`;
+        essaysList.appendChild(listItem);
+      });
+      bindDeleteEssayButtons();
+    }
+
+    function bindDeleteEssayButtons() {
+      let deleteButtons = document.querySelectorAll(".delete-essay");
+      deleteButtons.forEach(button => {
+        button.addEventListener("click", () => {
+          let index = button.getAttribute("data-index");
+          deleteEssay(index);
+        });
+      });
+    }
+
+    function deleteEssay(index) {
+      let savedEssays = JSON.parse(localStorage.getItem("savedEssays")) || [];
+      savedEssays.splice(index, 1);
+      localStorage.setItem("savedEssays", JSON.stringify(savedEssays));
+      displaySavedEssays();
+    }
+
+    displaySavedEssays(); // Display saved essays on page load
+
+    document.addEventListener('click', function (event) {
+      if (event.target.classList.contains('essay-title')) {
+        let index = event.target.getAttribute('data-index');
+        let savedEssays = JSON.parse(localStorage.getItem("savedEssays")) || [];
+        let essay = savedEssays[index];
+        let modalTitle = document.querySelector('#essayModal .modal-title');
+        let essayContent = document.querySelector('#essayModal #essayContent');
+        let modalDate = document.querySelector('#essayModal #modalDate');
+        let modalTime = document.querySelector('#essayModal #modalTime');
+        let modalWordCount = document.querySelector('#essayModal #modalWordCount');
+        modalTitle.textContent = essay.title;
+        modalDate.textContent = new Date().toLocaleDateString();
+        modalTime.textContent = new Date().toLocaleTimeString();
+        modalWordCount.textContent = essay.wordCount;
+        essayContent.textContent = essay.essay;
+      }
+    });
+  </script>
+
+  <!-- Modal -->
+  <div class="modal fade" id="essayModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel"></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p><strong>Date:</strong> <span id="modalDate"></span></p>
+          <p><strong>Time:</strong> <span id="modalTime"></span></p>
+          <p><strong>Word Count:</strong> <span id="modalWordCount"></span></p>
+          <p><strong>Essay:</strong> <span id="essayContent"></span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
